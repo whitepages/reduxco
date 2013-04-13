@@ -1,0 +1,1 @@
+require 'reduxco/version.rb'
