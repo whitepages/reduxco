@@ -10,7 +10,7 @@ Gem::Specification.new do |s|
   s.email = ['jreinecke@whitepages.com']
   s.homepage = ''
   s.summary = 'A graph reduction calculation engine.'
-  s.description = 'A graph reduction calculation engine inspired by combinators.'
+  s.description = "Reduxco is a general purpose graph reduction calculation engine for those\nnon-linear dependency flows that normal pipelines and Rack Middleware-like\narchitectures can't do cleanly."
   s.licenses = ['BSD']
 
   s.has_rdoc = true

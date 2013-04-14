@@ -1,14 +1,32 @@
 = Overview
 
-= Installation
+Reduxco is a general purpose graph reduction calculation engine for those
+non-linear dependency flows that normal pipelines and Rack Middleware-like
+architectures can't do cleanly.
+
+Conceptually, it is similar to using Rack Middleware with named keys to store
+intermediate calculations that have to be reused later, but unlike Rack Middleware,
+Reduxco is self organizing based on the dependencies used by each piece.
 
 = Examples
+
+== Basic Context Use
+
+In practice, one can build one ore more tables of callable objects (e.g. Procs or
+custom class instances), and register them with a Context.  Callables can then
+used their Context handle to refer to the callables they can depend on.
+
+== Overriding and Super
+
+Not Yet Written
 
 = Contact
 
 Jeff Reinecke <jreinecke@whitepages.com>
 
 = Raodmap
+
+TBD
 
 = History
 
