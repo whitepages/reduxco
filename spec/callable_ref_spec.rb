@@ -4,6 +4,11 @@ describe Reduxco::CallableRef do
 
   describe 'basic properites' do
 
+    it 'should error if the depth is 0 or less.' do
+      ->{Reduxco::CallableRef.new(:foo, 0)}.should raise_error(IndexError)
+      ->{Reduxco::CallableRef.new(:foo, -100)}.should raise_error(IndexError)
+    end
+
     it 'should be dynamic with a symbol name' do
       ref = Reduxco::CallableRef.new(:foo)
       ref.should be_dynamic
@@ -47,6 +52,58 @@ describe Reduxco::CallableRef do
       ref = Reduxco::CallableRef.new('foo')
       ref.name.should_not == :foo
       ref.name.should == 'foo'
+    end
+
+  end
+
+  describe 'movement' do
+
+    describe 'succ' do
+
+      it 'should return a ref with the same name, but one level deeper' do
+        name = Object.new
+        ref = Reduxco::CallableRef.new(name, 10)
+
+        ref.succ.tap do |r|
+          r.name.should == name
+          r.depth.should == 11
+        end
+      end
+
+      it 'should raise an exception when dynamic' do
+        ->{ Reduxco::CallableRef.new(:foo).succ }.should raise_error
+      end
+
+      it 'should alias next to succ' do
+        ref = Reduxco::CallableRef.new('foo')
+        ref.method(:next).should == ref.method(:succ)
+      end
+
+    end
+
+    describe 'pred' do
+
+      it 'should return a ref with the same name, but one level higher' do
+        name = Object.new
+        ref = Reduxco::CallableRef.new(name, 10)
+
+        ref.pred.tap do |r|
+          r.name.should == name
+          r.depth.should == 9
+        end
+      end
+
+      it 'should raise an exception when stepping too low' do
+        name = Object.new
+        ref = Reduxco::CallableRef.new(name, 1)
+
+        ->{ ref.pred }.should raise_error(IndexError)
+      end
+
+      it 'should raise an exception when dynamic' do
+        ->{ Reduxco::CallableRef.new(:foo).succ }.should raise_error
+      end
+
     end
 
   end
@@ -129,7 +186,7 @@ describe Reduxco::CallableRef do
     end
 
     it 'should sort equivalently named refs of lower depth above those of higher depths' do
-      depths = [6,0,2,2,9]
+      depths = [6,1,2,2,9]
       refs = depths.map {|depth| Reduxco::CallableRef.new(:foo, depth)}
 
       refs.sort.map {|ref| ref.depth}.should == depths.sort

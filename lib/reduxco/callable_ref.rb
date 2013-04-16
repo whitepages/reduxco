@@ -16,7 +16,9 @@ module Reduxco
     #         into a CallableTable; this is important for calls to super.
     def initialize(name, depth=nil)
       @name = name
-      @depth = depth
+      @depth = depth && depth.to_i
+
+      raise IndexError, "Depth must be greater than zero", caller if depth && depth<=0
     end
 
     # Returns the name of the refernce.
@@ -34,6 +36,25 @@ module Reduxco
     # Negation of dynamic?
     def static?
       return !dynamic?
+    end
+
+    # Returns a CallableRef with the same name, but one depth deeper.
+    def succ
+      if( dynamic? )
+        raise RuntimeError, "Dynamic references cannot undergo relative movement."
+      else
+        self.class.new(name, depth.succ)
+      end
+    end
+    alias_method :next, :succ
+
+    # Returns a CallableRef with the same name, but one depth higher.
+    def pred
+      if( dynamic? )
+        raise RuntimeError, "Dynamic references cannot undergo relative movement."
+      else
+        self.class.new(name, depth.pred)
+      end
     end
 
     # Returns a unique hash value; useful resolving Hash entries.
