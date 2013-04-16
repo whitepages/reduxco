@@ -8,6 +8,9 @@ module Reduxco
     # used as the separator between name and depth (if depth is given).
     SEPARATOR = ':'
 
+    # The minimum depth number allowed.
+    MIN_DEPTH = 1
+
     # [name] Typically the name is a symbol, but systems are free to use other
     #        objects as types are not coerced into other types at any point.
     #
@@ -18,7 +21,7 @@ module Reduxco
       @name = name
       @depth = depth && depth.to_i
 
-      raise IndexError, "Depth must be greater than zero", caller if depth && depth<=0
+      raise IndexError, "Depth must be greater than zero", caller if depth && depth<MIN_DEPTH
     end
 
     # Returns the name of the refernce.
