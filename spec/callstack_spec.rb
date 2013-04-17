@@ -55,7 +55,26 @@ describe Reduxco::Context::Callstack do
     rest.should be_kind_of(@stack.class)
   end
 
-  describe 'output formatting' do
+  it 'should return a properly structured copy of the stack' do
+    dup = @stack.dup
+
+    dup.should be_kind_of(@stack.class)
+    dup.object_id.should_not == @stack.object_id
+
+    dup.top.should == @stack.top
+  end
+
+  it 'should not mutate the copy of the stack out from under it' do
+    dup = @stack.dup
+
+    @stack.push(:moho)
+    dup.should_not include(:moho)
+
+    dup.push(:eve)
+    @stack.should_not include(:eve)
+  end
+
+  describe 'conversion and formatting' do
 
     let(:frame) do
       double('frame').tap do |f|
@@ -79,7 +98,29 @@ describe Reduxco::Context::Callstack do
       @stack.push(frame)
 
       frame.should_receive(:inspect)
-      puts @stack.inspect
+      str = @stack.inspect
+
+      str.should include('frame-inspect')
+    end
+
+    it 'should convert to a caller-style callstack' do
+      cs = @stack.to_caller
+
+      cs.each {|tr| tr.should be_kind_of(String)}
+      cs.first.should include('top')
+      cs.last.should include('bottom')
+    end
+
+    it 'should prepend a callstack line into the caller-style callstack, conterting it to string' do
+      top = Object.new
+      cs = @stack.to_caller(top)
+
+      cs.each {|tr| tr.should be_kind_of(String)}
+
+      head, *tail = cs
+
+      head.should == top.to_s
+      tail.should == @stack.to_caller
     end
 
   end

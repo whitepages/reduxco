@@ -41,6 +41,17 @@ module Reduxco
         self.class.new(@stack[0..-2].reverse)
       end
 
+      # Returns a copy of this callstack.
+      def dup
+        self.class.new(@stack.dup.reverse)
+      end
+
+      def to_caller(top=nil)
+        @stack.reverse.map {|frame| "#{self.class.name} frame: #{frame}"}.tap do |cc|
+          cc.unshift top.to_s unless top.nil?
+        end
+      end
+
       # Output the Callstack from top to bottom.
       def to_s
         @stack.reverse.to_s
