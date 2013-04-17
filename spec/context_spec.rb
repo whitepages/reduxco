@@ -58,9 +58,16 @@ describe Reduxco::Context do
       context.call(:sum).should == 8
     end
 
-    it 'should resolve a callref'
+    it 'should resolve a callref' do
+      context = Reduxco::Context.new(add_map)
+      context.call( Reduxco::CallableRef.new(:sum) ).should == 8
+    end
 
-    it 'should resolve a callref to a shadowed value'
+    it 'should resolve a callref to a shadowed value' do
+      context = Reduxco::Context.new(add_map, {sum: ->(c){-101}})
+      context.call( Reduxco::CallableRef.new(:sum, 1) ).should == 8
+      context.call( Reduxco::CallableRef.new(:sum, 2) ).should == -101
+    end
 
     describe 'errors' do
 

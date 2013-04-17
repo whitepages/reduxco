@@ -56,6 +56,10 @@ module Reduxco
     end
 
     # Given a refname, call it for this context and return the result.
+    #
+    # This can also take CallableRef instances directly, however if you find
+    # yourself passing in static references, this is likely because of design
+    # flaw in your callable map hierarchy.
     def call(refname)
       # First, we resolve the callref and invoke it.
       frame, callable = @calltable.resolve( CallableRef.new(refname) )
