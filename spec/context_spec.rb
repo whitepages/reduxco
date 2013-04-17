@@ -153,11 +153,44 @@ describe Reduxco::Context do
 
   describe 'super' do
 
-    it 'should resolve to the next previous ref of the same name'
+    it 'should resolve to the next previous ref of the same name' do
+      context = Reduxco::Context.new({
+        moho: ->(c){ 'top' }
+      },
+      {
+        moho: ->(c){ c.super }
+      })
 
-    it 'should chain calls and their results'
+      context.call(:moho).should == 'top'
+    end
 
-    it 'should throw a NameError if super cannot be resolved'
+    it 'should chain calls and their results' do
+      context = Reduxco::Context.new({
+        moho: ->(c){ 1 }
+      },
+      {
+        moho: ->(c){ c.super + 2 }
+      },
+      {
+        eve: ->(c){ 1024 }
+      },
+      {
+        moho: ->(c){ c.super + 4 }
+      })
+
+      context.call(:moho).should == 7
+    end
+
+    it 'should throw a NameError if super cannot be resolved' do
+      context = Reduxco::Context.new({
+        eve: ->(c){ 'eve' }
+      },
+      {
+        moho: ->(c){ c.super }
+      })
+
+      ->{ context.call(:moho) }.should raise_error(Reduxco::Context::NameError)
+    end
 
   end
 

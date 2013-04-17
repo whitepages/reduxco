@@ -43,7 +43,7 @@ module Reduxco
       # First, we resolve the callref and invoke it.
       frame, callable = @calltable.resolve( CallableRef.new(refname) )
 
-      # If the ref is nil, then we couldn't resolve.
+      # If the ref is nil then we couldn't resolve, otherwise invoke.
       if( frame.nil? )
         raise NameError, "No reference for name #{refname.inspect}", caller
       else
@@ -52,8 +52,16 @@ module Reduxco
     end
     alias_method :[], :call
 
-    def super(refname)
-      callref = CallableRef.new(refname)
+    def super
+      # First, we resolve the super ref.
+      frame, callable = @calltable.resolve_super( current_frame )
+
+      # If the ref is nil then we couldn't resolve, otherwise invoke.
+      if( frame.nil? )
+        raise NameError, "No super found for #{current_frame}", caller
+      else
+        invoke(frame, callable)
+      end
     end
 
     # Returns a copy of the current callstack.
