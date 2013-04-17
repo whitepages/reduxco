@@ -99,6 +99,24 @@ module Reduxco
       @callstack.top
     end
 
+    # Returns a true value if the given refname is defined in this context.
+    #
+    # If given a CallableRef, it returns a true value if the reference is
+    # resolvable.
+    def include?(refname)
+      @calltable.resolve( CallableRef.new(refname) ) != [nil,nil]
+    end
+
+    # Returns a true value if the given refname has been computed.
+    #
+    # If the given CallableRef, it returns a true if the reference has already
+    # been computed.
+    def completed?(refname)
+      callref = CallableRef.new(refname)
+      key = callref.dynamic? ? @calltable.resolve(callref).first : callref
+      @cache.include?(key)
+    end
+
     private
 
     # Invoke is the root method for all invocation of callables.
