@@ -6,7 +6,7 @@ module Reduxco
   # Context is the client facing object for Reduxco.
   #
   # Typically, one instantiates a Context with one or more maps of callables
-  # by name, and then calls +run+ to calculate all dependent nodes and return
+  # by name, and then calls Contxt#run to calculate all dependent nodes and return
   # a result.
   #
   # Maps may be any object that, when iterated with each, gives name/callable
@@ -15,6 +15,34 @@ module Reduxco
   # Names may be any object that can serve as a hash key.
   #
   # Callables can be any object that responds to the call method.
+  #
+  # == Overview
+  #
+  # Context orchestrates the reduction calculation.  It is primarily used
+  # by callables invoked during computation to get access to their environment.
+  #
+  # Instantiators of a Context typically only use the Context#run method.
+  #
+  # Users of Reduxco should use Reduxco::Reduxer rather than directly consume
+  # Context.
+  #
+  # == Callable Helper Functions
+  #
+  # Callables (objects that respond to call) are the meat of the Context.
+  # When their call method is invoked, it is passed a reference to the Context.
+  # Callables can use this reference to access a range of methods, including
+  # the following:
+  #
+  # [Context#call] Given a refname, run the associated callable and returns
+  #                its value. Usually invoked as Context#[]
+  # [Context#include?] Introspects if a refname is available.
+  # [Context#completed?] Instrospects if a callable has been called and returned.
+  # [Context#after] Given a refname and a block, runs the contents of the block
+  #                 after the given refname, but returns the value of the callable
+  #                 accociated with the refname.
+  # [Context#inside] Given a refname and a block, runs the callable associated
+  #                  with the refname, giving it access to running the block
+  #                  inside of it and getting its value.
   class Context
 
     # Special error type for halting due to a cyclic graph.
@@ -39,14 +67,16 @@ module Reduxco
       @calltable = CallableTable.new(@callable_maps)
 
       @callstack = Callstack.new
-      @cache = {}
+      reset_cache()
     end
 
     # Accessor to the locals that are seeded on calls to run.
     attr_reader :locals
 
-    # Invokes the given refname for this context (or uses :app by default),
-    # returning the result.
+    # This is the primary method for interaction with a Context.
+    #
+    # Clears the completed statuses of callables and invokes the given refname
+    # for this context (or uses :app by default), returning the result.
     #
     # Must be provided a locals object, which can be any object but is usually
     # a Hash of special values for leaf nodes in the calculation.
@@ -54,15 +84,23 @@ module Reduxco
     # It is good practice to treat locals as immutable, leveraging the Context
     # calculation infrastructure to store intermediate values instead.
     def run(refname=:app, locals)
+      reset_cache()
       @locals = locals
       self[refname]
     end
 
     # Given a refname, call it for this context and return the result.
     #
+    # This method is typically not directly called directly on a context,
+    # but instead is the primary method used within callables to refer to
+    # other callables.
+    #
     # This can also take CallableRef instances directly, however if you find
     # yourself passing in static references, this is likely because of design
     # flaw in your callable map hierarchy.
+    #
+    # Note that this does *not* clear the completed status of callables, so
+    # changes to the locals object (or calls outside of a run).
     def call(refname)
       # First, we resolve the callref and invoke it.
       frame, callable = @calltable.resolve( CallableRef.new(refname) )
@@ -127,6 +165,33 @@ module Reduxco
       raise AssertError, "Assertion that #{refname} has completed failed.", caller unless completed?(refname)
     end
 
+    # Runs the passed block before calling the passed refname.  Returns the
+    # value of the call to refname.
+    def before(refname)
+      yield(self) if block_given?
+      call(refname)
+    end
+
+    # Runs the passed block after calling the passed refname.  Returns the
+    # value of the call to refname.
+    def after(refname)
+      result = call(refname)
+      yield(self) if block_given?
+      result
+    end
+
+    # Duplication of Contexts are dangerous because of all the deeply
+    # nested structures.  That being said, it is very tempting to try
+    # to use a well-constructed Context rather than save and reuse the
+    # callable maps used for instantiation.
+    #
+    # To remedy this concern, dup acts as a copy constructor, making a new
+    # Context instance with the same callable maps, but is otherwise
+    # freshly constructed.
+    def dup
+      self.class.new(*@callable_maps)
+    end
+
     private
 
     # Invoke is the root method for all invocation of callables.
@@ -158,6 +223,11 @@ module Reduxco
         # No matter what crashes happened, we must ensure we pop the frame off the stack.
         popped = @callstack.pop
       end
+    end
+
+    def reset_cache
+      # We assign rather than destructively clear so that if we ever save/export caches from runs, they are not overwritten.
+      @cache = {}
     end
 
   end

@@ -333,6 +333,28 @@ describe Reduxco::Context do
 
   end
 
+  describe 'duplication' do
+
+    it 'should instantiate a new Context with the same callables on dup' do
+      map1 = double('map1')
+      map1.stub(:each)
+      map2 = double('map2')
+      map2.stub(:each)
+      context = Reduxco::Context.new(map1, map2)
+
+      dup = context.dup
+
+      dup.instance_variables.each do |ivar|
+        dup.instance_variable_get(ivar).object_id.should_not == context.instance_variable_get(ivar)
+      end
+
+      dup.instance_variable_get(:@callable_maps).tap do |maps|
+        maps.should == [map1, map2]
+      end
+    end
+
+  end
+
   describe 'run' do
 
     it 'should run with a refname and return the result' do
@@ -354,23 +376,113 @@ describe Reduxco::Context do
       context.run(:app, locals).should == locals
     end
 
+    it 'should reset the cache' do
+      counter = 0
+      context = Reduxco::Context.new(app: ->(c){counter+=1})
+
+      context.call(:app).should == 1
+      context.call(:app).should == 1
+
+      context.run(:app, {})
+
+      context.call(:app).should == 2
+    end
+
   end
 
   describe 'flow helpers' do
 
     describe 'before' do
 
-      it 'should invoke the before helper block before calling the passed refname'
+      it 'should invoke the before helper block before calling the passed refname' do
+        call_order = []
+        context = Reduxco::Context.new({
+          app: ->(c){ c.before(:a) {c[:b]} },
+            a: ->(c){ call_order << :a },
+            b: ->(c){ call_order << :b }
+        })
 
-      it 'should return the value of the passed refname'
+        context.call(:app)
+
+        call_order.should == [:b, :a]
+      end
+
+      it 'should return the value of the passed refname' do
+        context = Reduxco::Context.new({
+          app: ->(c){ c.before(:a) {c[:b]} },
+            a: ->(c){ 'a-result' },
+            b: ->(c){ 'b-result' }
+        })
+
+        context.call(:app).should == 'a-result'
+      end
+
+      it 'should yield the same context as the enclosing context (making accepting the yield in the block optonal)' do
+        out_c = nil
+        in_c = nil
+        context = Reduxco::Context.new({
+          app: Proc.new do |c|
+            out_c = c
+            c.before(:a) do |c2|
+              in_c = c2
+              c2[:b]
+            end
+          end,
+          a: ->(c){ 'a-result' },
+          b: ->(c){ 'b-result' }
+        })
+
+        context.call(:app)
+
+        out_c.should == in_c
+      end
 
     end
 
     describe 'after' do
 
-      it 'should invoke the after helper block after calling the passed refname'
+      it 'should invoke the after helper block after calling the passed refname' do
+        call_order = []
+        context = Reduxco::Context.new({
+          app: ->(c){ c.after(:a) {c[:b]} },
+            a: ->(c){ call_order << :a },
+            b: ->(c){ call_order << :b }
+        })
 
-      it 'should return the value of the passed refname'
+        context.call(:app)
+
+        call_order.should == [:a, :b]
+      end
+
+      it 'should return the value of the passed refname' do
+        context = Reduxco::Context.new({
+          app: ->(c){ c.after(:a) {c[:b]} },
+            a: ->(c){ 'a-result' },
+            b: ->(c){ 'b-result' }
+        })
+
+        context.call(:app).should == 'a-result'
+      end
+
+      it 'should yield the same context as the enclosing context (making accepting the yield in the block optonal)' do
+        out_c = nil
+        in_c = nil
+        context = Reduxco::Context.new({
+          app: Proc.new do |c|
+            out_c = c
+            c.after(:a) do |c2|
+              in_c = c2
+              c2[:b]
+            end
+          end,
+          a: ->(c){ 'a-result' },
+          b: ->(c){ 'b-result' }
+        })
+
+        context.call(:app)
+
+        out_c.should == in_c
+      end
 
     end
 
