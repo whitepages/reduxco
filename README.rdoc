@@ -18,9 +18,59 @@ In practice, one can build one ore more tables of callable objects (e.g. Procs o
 custom class instances), and register them with a Reduxco::Context.  Callables can then
 used their Reduco::Context handle to refer to the callables they can depend on.
 
+For example, the addition of two numbers could be done as follows:
+
+  map = {
+    sum: ->(c){ c[:x] + c[:y] },
+      x: ->(c){ c.locals(:x) },
+      y: ->(c){ c.locals(:y) }
+  }
+
+  sum = Reduxco::Context.new(map).run(:sum, x:3, y:5)
+  sum.should == 8
+
+Note that the symbol <code>:app</code> is the default root node of Reduxco::Context#run,
+so if <code>:sum</code> were renamed to <code>:app</code> above, the last line could
+be slightly simplified as:
+
+  sum = Reduxco::Context.new(map).run(x:3, y:5)
+
+Of course, any object responding to <code>call</code> can be used as the values in
+the map, so one could just as easily define a class with an instance method of
+<code>call</code> on it instead of using Proc objects.
+
 == Overriding and Super
 
-Not Yet Written
+If multiple maps of callables are given, and the keys (referred to as names from
+here on) are duplicated in the maps, the last map given wins, shadowing the previous map.
+For example:
+
+  map1 = {
+    message: ->(c){ 'Hello From Map 1' }
+  }
+
+  map2 = {
+    message: ->(c){ 'Hello From Map 2' }
+  }
+
+  msg = Reduxco::Context.new(map1, map2).run(:message, {})
+  msg.should == 'Hello From Map 2'
+
+If one wishes to refer to previous (shadowed) callables, one can do that using
+Context#super.  For example:
+
+  map1 = {
+    message: ->(c){ 'Hello From Map 1' }
+  }
+
+  map2 = {
+    message: ->(c){ c.super + ' and Hello From Map 2' }
+  }
+
+  msg = Reduxco::Context.new(map1, map2).run(:message, {})
+  msg.should == 'Hello From Map 1 and Hello From Map 2'
+
+== Before, After, and Inside
 
 = Contact
 
@@ -32,7 +82,7 @@ TBD
 
 = History
 
-[1.0.0 - 2013-Mar-13] Initial Release.
+[1.0.0 - 2013-Apr-??] Initial Release.
 
 = License
 

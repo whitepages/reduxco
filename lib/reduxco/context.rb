@@ -52,7 +52,7 @@ module Reduxco
     # calculation infrastructure to store intermediate values instead.
     def run(refname=:app, locals)
       @locals = locals
-      self[:app]
+      self[refname]
     end
 
     # Given a refname, call it for this context and return the result.
