@@ -4,22 +4,35 @@ module Reduxco
   class CallableRef
     include Comparable
 
-    # For string representations (typically used in debugging), this is
-    # used as the separator between name and depth (if depth is given).
-    SEPARATOR = ':'
-
     # The minimum depth number allowed.
     MIN_DEPTH = 1
 
+    # For string representations (typically used in debugging), this is
+    # used as the separator between name and depth (if depth is given).
+    STR_SEPARATOR = ':'
+
+    # For string representations, what is the opening bracket string.
+    STR_LEFT_BRACKET = '<'
+
+    # For string representations, what is the opening bracket string.
+    STR_RIGHT_BRACKET = '>'
+
     # [name] Typically the name is a symbol, but systems are free to use other
     #        objects as types are not coerced into other types at any point.
+    #        If the name is a CallableRef, then this acts as a copy constructor.
     #
     # [depth] The depth is normally not given when used, can be specified for
     #         referencing specific shadowed callables when callables are flattend
     #         into a CallableTable; this is important for calls to super.
     def initialize(name, depth=nil)
-      @name = name
-      @depth = depth && depth.to_i
+      case name
+      when self.class
+        @name = name.name
+        @depth = (depth && depth.to_i) || name.depth
+      else
+        @name = name
+        @depth = depth && depth.to_i
+      end
 
       raise IndexError, "Depth must be greater than zero", caller if depth && depth<MIN_DEPTH
     end
@@ -117,7 +130,7 @@ module Reduxco
 
     # Returns a human readable string form of this CallableReference.
     def to_s
-      @string ||= self.to_a.compact.map {|prop| prop.to_s}.join(SEPARATOR)
+      @string ||= STR_LEFT_BRACKET + self.to_a.compact.map {|prop| prop.to_s}.join(STR_SEPARATOR) + STR_RIGHT_BRACKET
     end
 
     # Returns a human readable string form of this CallableReference.

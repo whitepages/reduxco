@@ -59,6 +59,8 @@ describe Reduxco::CallableRef do
       callref = Reduxco::CallableRef.new(name, 3)
 
       copyref = Reduxco::CallableRef.new(callref)
+      copyref.name.should == callref.name
+      copyref.depth.should == callref.depth
       copyref.should == callref
     end
 
@@ -67,7 +69,7 @@ describe Reduxco::CallableRef do
       callref = Reduxco::CallableRef.new(name, 3)
 
       copyref = Reduxco::CallableRef.new(callref, 8)
-      copyref.name.should == copyref.name
+      copyref.name.should == callref.name
       copyref.depth.should == 8
       copyref.should_not == callref
     end
@@ -237,11 +239,6 @@ describe Reduxco::CallableRef do
       @stc_ref = Reduxco::CallableRef.new(:foo, 3)
     end
 
-    it 'should convert to string' do
-      @dyn_ref.to_s.should == @dyn_ref.name.to_s
-      @stc_ref.to_s.split(Reduxco::CallableRef::SEPARATOR).should == [@stc_ref.name, @stc_ref.depth].map {|v| v.to_s}
-    end
-
     it 'should convert to array' do
       @dyn_ref.to_a.should == [@dyn_ref.name, @dyn_ref.depth]
       @stc_ref.to_a.should == [@stc_ref.name, @stc_ref.depth]
@@ -252,8 +249,23 @@ describe Reduxco::CallableRef do
       @stc_ref.to_h.should == {name: @stc_ref.name, depth: @stc_ref.depth}
     end
 
-    it 'should not convert to string a missing splat like it had one' do
-      Reduxco::CallableRef.new([:foo,3]).to_s.should_not == Reduxco::CallableRef.new(:foo,3).to_s
+
+    describe 'string form' do
+
+      it 'should convert dynamic ref to string without depth' do
+        @dyn_ref.to_s.should include(@stc_ref.name.to_s)
+        @dyn_ref.to_s.should_not include(@stc_ref.depth.to_s)
+      end
+
+      it 'should convert static ref to string' do
+        @stc_ref.to_s.should include(@stc_ref.name.to_s)
+        @stc_ref.to_s.should include(@stc_ref.depth.to_s)
+      end
+
+      it 'should not convert to string a missing args splat like it had one' do
+        Reduxco::CallableRef.new([:foo,3]).to_s.should_not == Reduxco::CallableRef.new(:foo,3).to_s
+      end
+
     end
 
   end
