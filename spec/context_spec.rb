@@ -219,69 +219,91 @@ describe Reduxco::Context do
       Reduxco::Context.new(map1, map2)
     end
 
-    it 'should introspect which refnames are valid.' do
-      context.include?(:moho).should be_true
-      context.include?(:kerbin).should be_true
+    describe 'include' do
 
-      context.include?(:eeloo).should be_false
+      it 'should introspect which refnames are valid.' do
+        context.include?(:moho).should be_true
+        context.include?(:kerbin).should be_true
+
+        context.include?(:eeloo).should be_false
+      end
+
+      it 'should introspect which dynamic callrefs are valid.' do
+        context.include?( Reduxco::CallableRef.new(:moho) ).should be_true
+        context.include?( Reduxco::CallableRef.new(:kerbin) ).should be_true
+        context.include?( Reduxco::CallableRef.new(:eeloo) ).should be_false
+      end
+
+      it 'should introspect which static callrefs are valid.' do
+        context.include?( Reduxco::CallableRef.new(:moho,1) ).should be_true
+        context.include?( Reduxco::CallableRef.new(:kerbin,2) ).should be_true
+        context.include?( Reduxco::CallableRef.new(:moho,2) ).should be_false
+        context.include?( Reduxco::CallableRef.new(:kerbin,1) ).should be_false
+      end
+
     end
 
-    it 'should introspect which dynamic callrefs are valid.' do
-      context.include?( Reduxco::CallableRef.new(:moho) ).should be_true
-      context.include?( Reduxco::CallableRef.new(:kerbin) ).should be_true
-      context.include?( Reduxco::CallableRef.new(:eeloo) ).should be_false
+    describe 'completed' do
+
+      it 'should introspect which refnames have been computed.' do
+        [:moho, :eve, :kerbin, :duna, :app].each do |refname|
+          context.completed?(refname).should be_false
+        end
+
+        context.call(:app)
+
+        [:moho, :kerbin, :app].each do |refname|
+          context.completed?(refname).should be_true
+        end
+
+        [:eve, :duna].each do |refname|
+          context.completed?(refname).should be_false
+        end
+      end
+
+      it 'should introspect which callrefs have been computed.' do
+        all_ref_args = [[:kerbin,1], [:kerbin,2], [:moho,1], [:moho,2], [:duna,1], [:duna,2]]
+
+        all_ref_args.each do |name, depth|
+          callref = Reduxco::CallableRef.new(name, depth)
+          context.completed?(callref).should be_false
+        end
+
+        context.call(:app)
+
+        completed_ref_args = [[:kerbin,2], [:moho,1]]
+        incomplete_ref_args = all_ref_args - completed_ref_args
+
+        completed_ref_args.each do |name, depth|
+          callref = Reduxco::CallableRef.new(name, depth)
+          context.completed?(callref).should be_true
+        end
+
+        incomplete_ref_args.each do |name, depth|
+          callref = Reduxco::CallableRef.new(name, depth)
+          context.completed?(callref).should be_false
+        end
+      end
+
+      it 'should report not-found refs as uncomputed.' do
+        context.completed?(:eeloo).should be_false
+        context.completed?( Reduxco::CallableRef.new(:eloo,1) ).should be_false
+      end
+
     end
 
-    it 'should introspect which static callrefs are valid.' do
-      context.include?( Reduxco::CallableRef.new(:moho,1) ).should be_true
-      context.include?( Reduxco::CallableRef.new(:kerbin,2) ).should be_true
-      context.include?( Reduxco::CallableRef.new(:moho,2) ).should be_false
-      context.include?( Reduxco::CallableRef.new(:kerbin,1) ).should be_false
-    end
+    describe 'assert_completed' do
 
-    it 'should introspect which refnames have been computed.' do
-      [:moho, :eve, :kerbin, :duna, :app].each do |refname|
-        context.completed?(refname).should be_false
+      it 'should raise an exception if failed' do
+        ->{ context.assert_completed(:app) }.should raise_error(Reduxco::Context::AssertError)
       end
 
-      context.call(:app)
+      it 'should return nil if success' do
+        context[:app]
 
-      [:moho, :kerbin, :app].each do |refname|
-        context.completed?(refname).should be_true
+        context.assert_completed(:app).should be_nil
       end
 
-      [:eve, :duna].each do |refname|
-        context.completed?(refname).should be_false
-      end
-    end
-
-    it 'should introspect which callrefs have been computed.' do
-      all_ref_args = [[:kerbin,1], [:kerbin,2], [:moho,1], [:moho,2], [:duna,1], [:duna,2]]
-
-      all_ref_args.each do |name, depth|
-        callref = Reduxco::CallableRef.new(name, depth)
-        context.completed?(callref).should be_false
-      end
-
-      context.call(:app)
-
-      completed_ref_args = [[:kerbin,2], [:moho,1]]
-      incomplete_ref_args = all_ref_args - completed_ref_args
-
-      completed_ref_args.each do |name, depth|
-        callref = Reduxco::CallableRef.new(name, depth)
-        context.completed?(callref).should be_true
-      end
-
-      incomplete_ref_args.each do |name, depth|
-        callref = Reduxco::CallableRef.new(name, depth)
-        context.completed?(callref).should be_false
-      end
-    end
-
-    it 'should report not-found refs as uncomputed.' do
-      context.completed?(:eeloo).should be_false
-      context.completed?( Reduxco::CallableRef.new(:eloo,1) ).should be_false
     end
 
   end

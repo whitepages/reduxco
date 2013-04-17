@@ -26,6 +26,9 @@ module Reduxco
     # A namespaced NameError for when the callref cannot be resolved.
     class NameError < ::NameError; end
 
+    # Special error type when Context assert methods fail. See +assert_computed+.
+    class AssertError < StandardError; end
+
     # Instantiate a Context with the one or more callalbe maps (e.g. hashes
     # whose keys are names and values are callable) for calculations.
     #
@@ -115,6 +118,13 @@ module Reduxco
       callref = CallableRef.new(refname)
       key = callref.dynamic? ? @calltable.resolve(callref).first : callref
       @cache.include?(key)
+    end
+
+    # Raises an exception if +completed?+ is false.  Useful for asserting weak
+    # dependencies (those which you do not need the return value of) have
+    # been met.
+    def assert_completed(refname)
+      raise AssertError, "Assertion that #{refname} has completed failed.", caller unless completed?(refname)
     end
 
     private

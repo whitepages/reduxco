@@ -70,6 +70,20 @@ Context#super.  For example:
   msg = Reduxco::Context.new(map1, map2).run(:message, {})
   msg.should == 'Hello From Map 1 and Hello From Map 2'
 
+== Introspection
+
+There are several introspection methods for making assertions about the
+Reduxco::Context.  These are usually used by callables to inspect their
+environment before proceeding.
+
+[Reduxco::Context#include?] Allows you to inspect if the Reduxco::Context
+                            can resolve a given refname if called.
+[Reduxco::Context#completed?] Allows you to inspect if the callable associated
+                              with a given block name has already been called;
+                              useful for assertions about weak dependencies.
+[Reduxco::Context#assert_completed] Like <code>computed?</code>, but it raises
+                                   an exception if it fails.
+
 == Before, After, and Inside
 
 = Contact
