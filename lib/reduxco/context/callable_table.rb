@@ -7,19 +7,28 @@ module Reduxco
     # used directly.
     class CallableTable
 
+      # The constant returned by +resolve+ when resolution failure occurs.
+      # This constant can be multiply assigned to the same pattern as a
+      # normal resolution, but will assign nil into each value.
+      RESOLUTION_FAILURE = [nil,nil]
+
       # Instantiate with list of callable maps.
       def initialize(callable_map_list)
         @table = Hash[flatten(callable_map_list).sort.reverse]
       end
 
-      # Resolves the given callref.  Has a multivalued return of the form
-      # <code>[matching_callref, callable]</code> if the callref.  If the ref
-      # cannot be found, then the returned values will both be nil.
+      # Resolves the given callref.  The return value usually takes advantage of
+      # multiple assignment to dissect the return into the matching callref and
+      # found callable. however one can check for failed resolution simply by
+      # comparing the result to RESOLUTION_FAILURE.
+      #
+      # Note that if resolution fails, each value in the multiple assignment is
+      # given the value nil.
       def resolve(callref)
         if( callref.static? )
-          @table.include?(callref) ? [callref, @table[callref]] : [nil, nil]
+          @table.include?(callref) ? [callref, @table[callref]] : RESOLUTION_FAILURE
         else
-          @table.find(->{[nil,nil]}) {|refkey, callable| callref.include?(refkey)}
+          @table.find(->{RESOLUTION_FAILURE}) {|refkey, callable| callref.include?(refkey)}
         end
       end
       alias_method :[], :resolve
@@ -36,22 +45,22 @@ module Reduxco
           raise ArgumentError, "Cannot resolve the 'super' of a dyanmic CallableReference.", caller
         else
           # This is really nice, but runs in O(n):
-          #   @table.find(->{[nil,nil]}) {|refkey, callable| refkey.name == callref.name && refkey.depth < callref.depth}
+          #   @table.find(->{RESOLUTION_FAILURE}) {|refkey, callable| refkey.name == callref.name && refkey.depth < callref.depth}
           # This is more performant on large tables O(1) but has the potential for a lot of recursion depth:
           #   if( callref.depth <= CallableRef::MIN_DEPTH )
-          #     [nil, nil]
+          #     RESOLUTION_FAILURE
           #   else
           #     resolution = resolve(callref.pred)
-          #     resolution == [nil, nil] ? resolve_super(callref.pred) : resolution
+          #     resolution == RESOLUTION_FAILURE ? resolve_super(callref.pred) : resolution
           #   end
           # So we go for this imperative C-style flat iteration for O(1) and no recursion.
           ref = callref
           while( ref.depth > CallableRef::MIN_DEPTH )
             ref = ref.pred
             resolution = resolve(ref)
-            return resolution if(resolution != [nil,nil])
+            return resolution if(resolution != RESOLUTION_FAILURE)
           end
-          [nil, nil]
+          RESOLUTION_FAILURE
         end
       end
 

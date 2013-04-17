@@ -125,6 +125,17 @@ describe Reduxco::Context::CallableTable do
       end
     end
 
+    it 'should return RESOLUTION_FAILURE on resolution failure' do
+      @table.resolve(Reduxco::CallableRef.new(:eeloo, 1)).should == Reduxco::Context::CallableTable::RESOLUTION_FAILURE
+      @table.resolve(Reduxco::CallableRef.new(:eeloo)).should == Reduxco::Context::CallableTable::RESOLUTION_FAILURE
+    end
+
+    it 'should give nil values for multiple assignment of RESOLUTION_FAILURE' do
+      callref, callable = Reduxco::Context::CallableTable::RESOLUTION_FAILURE
+      callref.should be_nil
+      callable.should be_nil
+    end
+
     it 'should use :[] as an alias to :resolve' do
       @table.method(:[]).should == @table.method(:resolve)
     end

@@ -104,7 +104,7 @@ module Reduxco
     # If given a CallableRef, it returns a true value if the reference is
     # resolvable.
     def include?(refname)
-      @calltable.resolve( CallableRef.new(refname) ) != [nil,nil]
+      @calltable.resolve( CallableRef.new(refname) ) != CallableTable::RESOLUTION_FAILURE
     end
 
     # Returns a true value if the given refname has been computed.
