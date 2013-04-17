@@ -310,21 +310,49 @@ describe Reduxco::Context do
 
   describe 'initialization' do
 
-    it 'should initialize with a single callable map'
+    let(:map1) { {moho: ->(c){'moho1'}} }
+    let(:map2) { {eve: ->(c){'eve2'}} }
 
-    it 'should initialize with multiple callable maps'
+    it 'should initialize with a single callable map' do
+      context = Reduxco::Context.new(map1)
+      context.should include(:moho)
+    end
 
-    it 'should only invoke :each on the map (returning name/callable pairs)'
+    it 'should initialize with multiple callable maps' do
+      context = Reduxco::Context.new(map1, map2)
+      context.should include(:moho)
+      context.should include(:eve)
+    end
+
+    it 'should only invoke :each on the map (returning name/callable pairs)' do
+      map = double('map')
+      map.should_receive(:each)
+
+      Reduxco::Context.new(map)
+    end
 
   end
 
   describe 'run' do
 
-    it 'should run with a refname and return the result'
+    it 'should run with a refname and return the result' do
+      context = Reduxco::Context.new(app: ->(c){'app-result'})
 
-    it 'should run with :app by default'
+      context.run(:app, {}).should == 'app-result'
+    end
 
-    it 'should allow access to locals inside of callables'
+    it 'should run with :app by default' do
+      context = Reduxco::Context.new(app: ->(c){'app-result'})
+
+      context.run(:app, {}).should == 'app-result'
+    end
+
+    it 'should allow access to the locals object inside of callables' do
+      context = Reduxco::Context.new(app: ->(c){c.locals})
+
+      locals = Object.new
+      context.run(:app, locals).should == locals
+    end
 
   end
 
