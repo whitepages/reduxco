@@ -58,6 +58,10 @@ describe Reduxco::Context do
       context.call(:sum).should == 8
     end
 
+    it 'should resolve a callref'
+
+    it 'should resolve a callref to a shadowed value'
+
     describe 'errors' do
 
       it 'should error if refname resolves to a non-callable' do
@@ -123,34 +127,6 @@ describe Reduxco::Context do
 
   end
 
-  describe 'callstack interface' do
-
-    it 'should return a copy of the callstack' do
-      context = Reduxco::Context.new
-
-      context.callstack.should be_kind_of(Reduxco::Context::Callstack)
-      context.callstack.should.object_id.should_not == context.callstack
-    end
-
-    it 'should return a copy of the callstack from inside of a call' do
-      context = Reduxco::Context.new({
-        app: ->(c){ c.callstack }
-      })
-
-      stack = context.call(:app)
-
-      stack.depth.should == 1
-      stack.top.name.should == :app
-    end
-
-    it 'should return the current frame' do
-      context = Reduxco::Context.new({
-        app: ->(c){ c.current_frame.should == c.callstac.top }
-      })
-    end
-
-  end
-
   describe 'super' do
 
     it 'should resolve to the next previous ref of the same name' do
@@ -194,15 +170,112 @@ describe Reduxco::Context do
 
   end
 
+  describe 'callstack interface' do
+
+    it 'should return a copy of the callstack' do
+      context = Reduxco::Context.new
+
+      context.callstack.should be_kind_of(Reduxco::Context::Callstack)
+      context.callstack.should.object_id.should_not == context.callstack
+    end
+
+    it 'should return a copy of the callstack from inside of a call' do
+      context = Reduxco::Context.new({
+        app: ->(c){ c.callstack }
+      })
+
+      stack = context.call(:app)
+
+      stack.depth.should == 1
+      stack.top.name.should == :app
+    end
+
+    it 'should return the current frame' do
+      context = Reduxco::Context.new({
+        app: ->(c){ c.current_frame.should == c.callstac.top }
+      })
+    end
+
+  end
+
   describe 'introspection interface' do
 
-    it 'should introspect which refnames are valid.'
+    let(:map1) do
+      {moho: ->(c){'moho-value'}, eve: ->(c){'eve-value'}}
+    end
 
-    it 'should introspect which callrefs are valid.'
+    let(:map2) do
+      {kerbin: ->(c){'kerbin-value'}, duna: ->(c){'duna-value'}, app: ->(c){c[:kerbin] + c[:moho]}}
+    end
 
-    it 'should introspect which refnames have been computed.'
+    let(:context) do
+      Reduxco::Context.new(map1, map2)
+    end
 
-    it 'should introspect which callrefs have been computed.'
+    it 'should introspect which refnames are valid.' do
+      context.include?(:moho).should be_true
+      context.include?(:kerbin).should be_true
+
+      context.include?(:eeloo).should be_false
+    end
+
+    it 'should introspect which dynamic callrefs are valid.' do
+      context.include?( Reduxco::CallableRef.new(:moho) ).should be_true
+      context.include?( Reduxco::CallableRef.new(:kerbin) ).should be_true
+      context.include?( Reduxco::CallableRef.new(:eeloo) ).should be_false
+    end
+
+    it 'should introspect which static callrefs are valid.' do
+      context.include?( Reduxco::CallableRef.new(:moho,1) ).should be_true
+      context.include?( Reduxco::CallableRef.new(:kerbin,2) ).should be_true
+      context.include?( Reduxco::CallableRef.new(:moho,2) ).should be_false
+      context.include?( Reduxco::CallableRef.new(:kerbin,1) ).should be_false
+    end
+
+    it 'should introspect which refnames have been computed.' do
+      [:moho, :eve, :kerbin, :duna, :app].each do |refname|
+        context.completed?(refname).should be_false
+      end
+
+      context.call(:app)
+
+      [:moho, :kerbin, :app].each do |refname|
+        context.completed?(refname).should be_true
+      end
+
+      [:eve, :duna].each do |refname|
+        context.completed?(refname).should be_false
+      end
+    end
+
+    it 'should introspect which callrefs have been computed.' do
+      all_ref_args = [[:kerbin,1], [:kerbin,2], [:moho,1], [:moho,2], [:duna,1], [:duna,2]]
+
+      all_ref_args.each do |name, depth|
+        callref = Reduxco::CallableRef.new(name, depth)
+        context.completed?(callref).should be_false
+      end
+
+      context.call(:app)
+
+      completed_ref_args = [[:kerbin,2], [:moho,1]]
+      incomplete_ref_args = all_ref_args - completed_ref_args
+
+      completed_ref_args.each do |name, depth|
+        callref = Reduxco::CallableRef.new(name, depth)
+        context.completed?(callref).should be_true
+      end
+
+      incomplete_ref_args.each do |name, depth|
+        callref = Reduxco::CallableRef.new(name, depth)
+        context.completed?(callref).should be_false
+      end
+    end
+
+    it 'should report not-found refs as uncomputed.' do
+      context.completed?(:eeloo).should be_false
+      context.completed?( Reduxco::CallableRef.new(:eloo,1) ).should be_false
+    end
 
   end
 

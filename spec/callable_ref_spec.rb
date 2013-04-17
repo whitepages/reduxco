@@ -54,6 +54,24 @@ describe Reduxco::CallableRef do
       ref.name.should == 'foo'
     end
 
+    it 'should be a symantecially identical callref when a callref is given as the name' do
+      name = Object.new # Purposefully choose an object that, if duplicated, will give a differing equality.
+      callref = Reduxco::CallableRef.new(name, 3)
+
+      copyref = Reduxco::CallableRef.new(callref)
+      copyref.should == callref
+    end
+
+    it 'should override a passed callref\'s depth when a depth arg is given' do
+      name = Object.new # Purposefully choose an object that, if duplicated, will give a differing equality.
+      callref = Reduxco::CallableRef.new(name, 3)
+
+      copyref = Reduxco::CallableRef.new(callref, 8)
+      copyref.name.should == copyref.name
+      copyref.depth.should == 8
+      copyref.should_not == callref
+    end
+
   end
 
   describe 'movement' do
