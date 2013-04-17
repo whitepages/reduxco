@@ -82,7 +82,7 @@ environment before proceeding.
                               with a given block name has already been called;
                               useful for assertions about weak dependencies.
 [Reduxco::Context#assert_completed] Like <code>computed?</code>, but it raises
-                                   an exception if it fails.
+                                    an exception if it fails.
 
 == Before, After, and Inside
 
