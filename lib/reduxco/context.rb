@@ -3,10 +3,27 @@ require_relative 'context/callable_table'
 require_relative 'context/callstack'
 
 module Reduxco
+  # Context is the client facing object for Reduxco.
+  #
+  # Typically, one instantiates a Context with one or more maps of callables
+  # by name, and then calls +run+ to calculate all dependent nodes and return
+  # a result.
+  #
+  # Maps may be any object that, when iterated with each, gives name/callable
+  # pairs.
+  #
+  # Names may be any object that can serve as a hash key.
+  #
+  # Callables can be any object that responds to the call method.
   class Context
 
+    # Special error type for halting due to a cyclic graph.
     class CyclicalError < StandardError; end
+
+    # Special error type for when the callable provided has no call method.
     class NotCallableError < NoMethodError; end
+
+    # A namespaced NameError for when the callref cannot be resolved.
     class NameError < ::NameError; end
 
     # Instantiate a Context with the one or more callalbe maps (e.g. hashes
@@ -52,6 +69,10 @@ module Reduxco
     end
     alias_method :[], :call
 
+    # When invoked, finds the next callable in the CallableTable up the chain
+    # from the current frame, calls it, and returns the result.
+    #
+    # This is primarily used to reference shadowed callables in their overrides.
     def super
       # First, we resolve the super ref.
       frame, callable = @calltable.resolve_super( current_frame )
@@ -76,6 +97,13 @@ module Reduxco
 
     private
 
+    # Invoke is the root method for all invocation of callables.
+    #
+    # It is given the frame to put on the stack (typically just a CallableRef),
+    # and the callable to invoke.
+    #
+    # It is up to the callers of this method to resolve the callable that must
+    # be called, or give a Reduxco::Context::NameError if it cannot be found.
     def invoke(frame, callable)
       #Push the frame onto the callstack.
       @callstack.push(frame)

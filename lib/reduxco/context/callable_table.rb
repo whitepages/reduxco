@@ -13,8 +13,8 @@ module Reduxco
       end
 
       # Resolves the given callref.  Has a multivalued return of the form
-      # [matching_callref, callable] if the callref.  If the ref cannot be found, then
-      # the returnd values will both be nil.
+      # <code>[matching_callref, callable]</code> if the callref.  If the ref
+      # cannot be found, then the returned values will both be nil.
       def resolve(callref)
         if( callref.static? )
           @table.include?(callref) ? [callref, @table[callref]] : [nil, nil]

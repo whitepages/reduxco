@@ -105,18 +105,22 @@ module Reduxco
       end
     end
 
+    # Returns an array form of this CallableReference.
     def to_a
       @array ||= [name, depth]
     end
 
+    # Returns a hash form of this CallableReference.
     def to_h
       @hash ||= {name:name, depth:depth}
     end
 
+    # Returns a human readable string form of this CallableReference.
     def to_s
       @string ||= self.to_a.compact.map {|prop| prop.to_s}.join(SEPARATOR)
     end
 
+    # Returns a human readable string form of this CallableReference.
     def inspect
       to_s
     end

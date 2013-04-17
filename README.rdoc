@@ -8,13 +8,15 @@ Conceptually, it is similar to using Rack Middleware with named keys to store
 intermediate calculations that have to be reused later, but unlike Rack Middleware,
 Reduxco is self organizing based on the dependencies used by each piece.
 
+It's primary public facing class is Reduxco::Context.
+
 = Examples
 
 == Basic Context Use
 
 In practice, one can build one ore more tables of callable objects (e.g. Procs or
-custom class instances), and register them with a Context.  Callables can then
-used their Context handle to refer to the callables they can depend on.
+custom class instances), and register them with a Reduxco::Context.  Callables can then
+used their Reduco::Context handle to refer to the callables they can depend on.
 
 == Overriding and Super
 

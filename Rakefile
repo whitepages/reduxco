@@ -14,4 +14,5 @@ require 'rdoc/task'
 RDoc::Task.new do |rdoc|
   rdoc.rdoc_dir = "rdoc"
   rdoc.rdoc_files.add "lib/**/*.rb", "README.rdoc"
+  rdoc.options << "--all"
 end

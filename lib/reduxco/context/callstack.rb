@@ -6,6 +6,8 @@ module Reduxco
     # current frame.
     class Callstack
 
+      # Initialize an empty callstack.  Optionally takes an array of frames,
+      # reading from top of the stack to the bottom.
       def initialize(array=[])
         @stack = array.reverse
       end
@@ -46,6 +48,10 @@ module Reduxco
         self.class.new(@stack.dup.reverse)
       end
 
+      # Returns the callstack in a form that looks like Ruby's caller method,
+      # so that it can be placed in exception backtraces.  Typically one wants
+      # the top of the caller-style stack to be the trace to where Context#call was
+      # invoked in a caller, so this may be provided.
       def to_caller(top=nil)
         @stack.reverse.map {|frame| "#{self.class.name} frame: #{frame}"}.tap do |cc|
           cc.unshift top.to_s unless top.nil?
