@@ -110,7 +110,11 @@ module Reduxco
     # from the current frame, calls it, and returns the result.
     #
     # This is primarily used to reference shadowed callables in their overrides.
-    def super
+    #
+    # Like Context#call, it may take a block that is yielded to with
+    # Context#yield.  If no block is given but the current scope has a block,
+    # its block will be automatically forwarded.
+    def super(&block)
       # First, we resolve the super ref.
       frame, callable = @calltable.resolve_super( current_frame )
 
@@ -118,7 +122,18 @@ module Reduxco
       if( frame.nil? )
         raise NameError, "No super found for #{current_frame}", caller
       else
-        invoke(frame, callable)
+        block = block_for_frame(current_frame) if block.nil?
+        invoke(frame, callable, &block)
+      end
+    end
+
+    # Yields to the block given to a #Context.call
+    def yield(*args)
+      block = block_for_frame(current_frame)
+      if( block.nil? )
+        raise LocalJumpError, "No block given to yield to.", caller
+      else
+        block.yield(*args)
       end
     end
 
@@ -172,16 +187,6 @@ module Reduxco
       result
     end
 
-    # Yields to the block given to a #Context.call
-    def yield(*args)
-      block = @block_association_cache[current_frame]
-      if( block.nil? )
-        raise LocalJumpError, "No block given to yield to.", caller
-      else
-        block.yield(*args)
-      end
-    end
-
     # Duplication of Contexts are dangerous because of all the deeply
     # nested structures.  That being said, it is very tempting to try
     # to use a well-constructed Context rather than save and reuse the
@@ -226,6 +231,12 @@ module Reduxco
         # No matter what crashes happened, we must ensure we pop the frame off the stack.
         popped = @callstack.pop
       end
+    end
+
+    # Returns the block argument given to the Context#call for the given frame,
+    # or nil if no block was given.
+    def block_for_frame(frame)
+      @block_association_cache[frame]
     end
 
   end

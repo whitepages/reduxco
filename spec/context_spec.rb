@@ -191,6 +191,33 @@ describe Reduxco::Context do
       ->{ context.call(:moho) }.should raise_error(Reduxco::Context::NameError)
     end
 
+    it 'should allow super to recieve a block to yield to' do
+
+      context = Reduxco::Context.new({
+        moho: ->(c){ c.yield(3) }
+      },
+      {
+        moho: ->(c){ c.super {|x| x*x} }
+      })
+
+      context.call(:moho).should == 9
+    end
+
+
+    it 'should forward the yield block to super' do
+      context = Reduxco::Context.new({
+        moho: ->(c){ c.yield(3) }
+      },
+      {
+        moho: ->(c){ c.super },
+        app: ->(c){ c.call(:moho){|x| x*x } }
+      })
+
+      $debug = true
+      context.call(:app).should == 9
+      $debug = false
+    end
+
   end
 
   describe 'callstack interface' do

@@ -23,6 +23,8 @@ module Reduxco
     # mistake.
     attr_reader :context
 
+    # Retrieves the value of the given refname.  Both final and intermediate
+    # values are cached, so multiple calls have low overhead.
     def call(refname=:app)
       @context.call(refname)
     end

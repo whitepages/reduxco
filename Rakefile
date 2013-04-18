@@ -15,4 +15,5 @@ RDoc::Task.new do |rdoc|
   rdoc.rdoc_dir = "rdoc"
   rdoc.rdoc_files.add "lib/**/*.rb", "README.rdoc"
   rdoc.options << "--all"
+  #rdoc.options << "--coverage-report" # Useful for finding something undocumented, but won't generate output when this is selected!
 end
