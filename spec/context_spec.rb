@@ -213,9 +213,7 @@ describe Reduxco::Context do
         app: ->(c){ c.call(:moho){|x| x*x } }
       })
 
-      $debug = true
       context.call(:app).should == 9
-      $debug = false
     end
 
   end
@@ -581,7 +579,17 @@ describe Reduxco::Context do
           context.call(:app).should == ['inner', 'middle', 'outter']
         end
 
-        it 'should not corrupt the handle stack when an exception is thrown and then caught inside of nested insides'
+        it 'should not corrupt the handle stack when an exception is thrown and then caught inside of nested insides' do
+          context = Reduxco::Context.new(
+            app: ->(c){ c.inside(:outter){ c.inside(:middle){ c.inside(:inner) {c[:leaf]} } } },
+            outter: ->(c){ c.yield << 'outter' },
+            middle: ->(c){ begin c.yield << 'middle' rescue ['middle-caught'] end },
+            inner: ->(c){ c.yield << 'inner' },
+            leaf: ->(c){ raise RuntimeError }
+          )
+
+          context.call(:app).should == ['middle-caught', 'outter']
+        end
 
         it 'should not allow yielding from a nested call.' do
           context = Reduxco::Context.new(
