@@ -78,7 +78,11 @@ module Reduxco
     # Call results are cached so that their values can be re-used.  If callables
     # have side-effects their side-effects are only invoked the first time
     # they are run.
-    def call(refname=:app)
+    #
+    # Given a block, Context#yield may be used by the callable to invoke the
+    # block.  Depending on the purpose of the block, Context#inside may be
+    # the preferrable alias.
+    def call(refname=:app, &block)
       # First, we resolve the callref and invoke it.
       frame, callable = @calltable.resolve( CallableRef.new(refname) )
 
@@ -89,8 +93,15 @@ module Reduxco
         invoke(frame, callable)
       end
     end
-    alias_method :[], :call
     alias_method :reduce, :call
+
+    # Shorthand for call, [] is the most frequently used form of the call method
+    # due to its abbreviated form..
+    alias_method :[], :call
+
+    # Inside is preferred to call when call is given a block and the intent
+    # is to manage flow control.  Compare to Context#before and Context#after.
+    alias_method :inside, :call
 
     # When invoked, finds the next callable in the CallableTable up the chain
     # from the current frame, calls it, and returns the result.
@@ -158,18 +169,7 @@ module Reduxco
       result
     end
 
-    # Given a refname and a block, the block can be called inside of the
-    # callable for refname, using Context#yield.  The value of refname's
-    # callable is returned.
-    def inside(refname, &block)
-      @insidestack << block
-      result = call(refname)
-      @insidestack.pop
-      return result
-    end
-
-    # Yields to the given arguments to the block given to the last call of
-    # Context#inside, returning the result.
+    # Yields to the block given to a #Context.call
     def yield(*args)
       @insidestack.last && @insidestack.last.call(*args)
     end

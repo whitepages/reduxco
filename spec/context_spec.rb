@@ -76,6 +76,15 @@ describe Reduxco::Context do
       context.call(:app).should == generated_object
     end
 
+    it 'should allow yielding to a block.' do
+      context = Reduxco::Context.new(
+        app: ->(c){ c.call(:outter){|x| x*x} },
+        outter: ->(c){ c.yield(3) + c.yield(4) }
+      )
+
+      context.call(:app).should == 25
+    end
+
     describe 'errors' do
 
       it 'should error if refname resolves to a non-callable' do
@@ -501,6 +510,10 @@ describe Reduxco::Context do
           context = Reduxco::Context.new(map)
         end
 
+        it 'should be an alias to call, as it is just call with a block provided.' do
+          context.method(:inside).should == context.method(:call)
+        end
+
         it 'should return the block\'s value from inside the passed refname' do
           context.call(:app)
 
@@ -530,13 +543,29 @@ describe Reduxco::Context do
 
       describe 'yield failure modes' do
 
-        it 'should give nested insides their correct block handles'
+        it 'should give nested insides their correct block handles' do
+          context = Reduxco::Context.new(
+            app: ->(c){ c.inside(:outter){ c.inside(:middle){ c[:inner] } } },
+            outter: ->(c){ c.yield << 'outter' },
+            middle: ->(c){ c.yield << 'middle' },
+            inner: ->(c){ ['inner'] }
+          )
+
+          context.call(:app).should == ['inner', 'middle', 'outter']
+        end
 
         it 'should not corrupt the handle stack when an exception is thrown and then caught inside of nested insides'
 
         it 'should not allow yielding from a nested call.'
 
-        it 'should not allow a double yield.'
+        it 'should allow a double yield.' do
+          context = Reduxco::Context.new(
+            app: ->(c){ c.inside(:outter){|x| x*x} },
+            outter: ->(c){ c.yield(3) + c.yield(4) }
+          )
+
+          context.call(:app).should == 25
+        end
 
       end
 
