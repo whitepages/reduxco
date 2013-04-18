@@ -405,15 +405,13 @@ describe Reduxco::Context do
         context.call(:app).should == 'a-result'
       end
 
-      it 'should yield the same context as the enclosing context (making accepting the yield in the block optonal)' do
-        out_c = nil
-        in_c = nil
+      it 'should not yield anything to the block' do
+        block_args = nil
         context = Reduxco::Context.new({
           app: Proc.new do |c|
-            out_c = c
-            c.before(:a) do |c2|
-              in_c = c2
-              c2[:b]
+            c.before(:a) do |*args|
+              block_args = args
+              c[:b]
             end
           end,
           a: ->(c){ 'a-result' },
@@ -422,7 +420,7 @@ describe Reduxco::Context do
 
         context.call(:app)
 
-        out_c.should == in_c
+        block_args.should == []
       end
 
     end
@@ -452,15 +450,13 @@ describe Reduxco::Context do
         context.call(:app).should == 'a-result'
       end
 
-      it 'should yield the same context as the enclosing context (making accepting the yield in the block optonal)' do
-        out_c = nil
-        in_c = nil
+      it 'should not yield anything' do
+        block_args = nil
         context = Reduxco::Context.new({
           app: Proc.new do |c|
-            out_c = c
-            c.after(:a) do |c2|
-              in_c = c2
-              c2[:b]
+            c.after(:a) do |*args|
+              block_args = args
+              c[:b]
             end
           end,
           a: ->(c){ 'a-result' },
@@ -469,7 +465,7 @@ describe Reduxco::Context do
 
         context.call(:app)
 
-        out_c.should == in_c
+        block_args.should == []
       end
 
     end

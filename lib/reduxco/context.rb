@@ -144,7 +144,7 @@ module Reduxco
     # Runs the passed block before calling the passed refname.  Returns the
     # value of the call to refname.
     def before(refname)
-      yield(self) if block_given?
+      yield if block_given?
       call(refname)
     end
 
@@ -152,7 +152,7 @@ module Reduxco
     # value of the call to refname.
     def after(refname)
       result = call(refname)
-      yield(self) if block_given?
+      yield if block_given?
       result
     end
 
