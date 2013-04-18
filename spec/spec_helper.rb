@@ -1,3 +1,8 @@
+require 'simplecov'
+SimpleCov.start do
+  add_filter {|sf| sf.filename !~ /\/lib\//}
+end
+
 require 'reduxco'
 
 # Require the debugger, if present.

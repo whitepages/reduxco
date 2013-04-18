@@ -121,7 +121,7 @@ describe Reduxco::CallableRef do
       end
 
       it 'should raise an exception when dynamic' do
-        ->{ Reduxco::CallableRef.new(:foo).succ }.should raise_error
+        ->{ Reduxco::CallableRef.new(:foo).pred }.should raise_error
       end
 
     end

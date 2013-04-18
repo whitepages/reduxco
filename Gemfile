@@ -11,4 +11,5 @@ end
 group :test do
   gem 'rake'
   gem 'rspec', '~>2.13'
+  gem 'simplecov'
 end
