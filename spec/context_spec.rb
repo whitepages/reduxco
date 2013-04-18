@@ -484,6 +484,10 @@ describe Reduxco::Context do
 
       it 'should return the value of the passed refname'
 
+      it 'should give nested insides their correct block handles'
+
+      it 'should not corrupt the handle stack when an exception is thrown and then caught inside of nested insides'
+
     end
 
   end
