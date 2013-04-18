@@ -4,3 +4,4 @@ Gemfile.lock
 *.swo
 rdoc
 coverage
+*.gem
