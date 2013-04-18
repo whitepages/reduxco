@@ -472,17 +472,73 @@ describe Reduxco::Context do
 
     describe 'inside' do
 
-      it 'should make the helper block available to the passed refname'
+      describe 'client behavior' do
 
-      it 'should allow calling the block from inside the passed refname'
+        let(:table){ {} }
 
-      it 'should return the block\'s value reom inside the passed refname'
+        let(:outter) do
+          Proc.new do |c|
+            table[:yeild_result] = c.yield('arg1', 'arg2')
+            'outter_result'
+          end
+        end
 
-      it 'should return the value of the passed refname'
+        let(:app) do
+          Proc.new do |c|
+            table[:inside_method_result] = c.inside(:outter) do |*args|
+              table[:args] = args
+              'yield_result'
+            end
+            'app_result'
+          end
+        end
 
-      it 'should give nested insides their correct block handles'
+        let(:map) do
+          {app:app, outter:outter}
+        end
 
-      it 'should not corrupt the handle stack when an exception is thrown and then caught inside of nested insides'
+        let(:context) do
+          context = Reduxco::Context.new(map)
+        end
+
+        it 'should return the block\'s value from inside the passed refname' do
+          context.call(:app)
+
+          table[:yeild_result].should == 'yield_result'
+        end
+
+        it 'should return the value of the passed refname' do
+          context.call(:app)
+
+
+          table[:inside_method_result].should == 'outter_result'
+        end
+
+        it 'should allow yielding of args to the block' do
+          context.call(:app)
+
+          table[:args].should == ['arg1', 'arg2']
+        end
+
+        it 'should allow taking no block' do
+          context = Reduxco::Context.new(app: ->(c){ c.inside(:outter) }, outter:outter)
+
+          context.call(:app).should == 'outter_result'
+        end
+
+      end
+
+      describe 'yield failure modes' do
+
+        it 'should give nested insides their correct block handles'
+
+        it 'should not corrupt the handle stack when an exception is thrown and then caught inside of nested insides'
+
+        it 'should not allow yielding from a nested call.'
+
+        it 'should not allow a double yield.'
+
+      end
 
     end
 

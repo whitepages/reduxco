@@ -65,6 +65,8 @@ module Reduxco
 
       @callstack = Callstack.new
       @cache = {}
+
+      @insidestack = []
     end
 
     # Given a refname, call it for this context and return the result.
@@ -154,6 +156,22 @@ module Reduxco
       result = call(refname)
       yield if block_given?
       result
+    end
+
+    # Given a refname and a block, the block can be called inside of the
+    # callable for refname, using Context#yield.  The value of refname's
+    # callable is returned.
+    def inside(refname, &block)
+      @insidestack << block
+      result = call(refname)
+      @insidestack.pop
+      return result
+    end
+
+    # Yields to the given arguments to the block given to the last call of
+    # Context#inside, returning the result.
+    def yield(*args)
+      @insidestack.last && @insidestack.last.call(*args)
     end
 
     # Duplication of Contexts are dangerous because of all the deeply
