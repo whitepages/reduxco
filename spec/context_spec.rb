@@ -534,9 +534,9 @@ describe Reduxco::Context do
         end
 
         it 'should allow taking no block' do
-          context = Reduxco::Context.new(app: ->(c){ c.inside(:outter) }, outter:outter)
+          context = Reduxco::Context.new(app: ->(c){ c.inside(:moho) }, moho: ->(c){'moho-result'})
 
-          context.call(:app).should == 'outter_result'
+          context.call(:app).should == 'moho-result'
         end
 
       end
@@ -556,7 +556,15 @@ describe Reduxco::Context do
 
         it 'should not corrupt the handle stack when an exception is thrown and then caught inside of nested insides'
 
-        it 'should not allow yielding from a nested call.'
+        it 'should not allow yielding from a nested call.' do
+          context = Reduxco::Context.new(
+            app: ->(c){ c.inside(:outter){ 2 } },
+            outter: ->(c){ c[:middle] },
+            middle: ->(c){ c.yield }
+          )
+
+          ->{ context.call(:app) }.should raise_error(Reduxco::Context::LocalJumpError)
+        end
 
         it 'should allow a double yield.' do
           context = Reduxco::Context.new(

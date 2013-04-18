@@ -54,6 +54,9 @@ module Reduxco
     # Special error type when Context assert methods fail. See +assert_computed+.
     class AssertError < StandardError; end
 
+    # A namespaced LocalJumpError for when no block is given but a yield is called.
+    class LocalJumpError < ::LocalJumpError; end
+
     # Instantiate a Context with the one or more callalbe maps (e.g. hashes
     # whose keys are names and values are callable) for calculations.
     #
@@ -172,7 +175,11 @@ module Reduxco
     # Yields to the block given to a #Context.call
     def yield(*args)
       block = @block_association_cache[current_frame]
-      block && block.yield(*args)
+      if( block.nil? )
+        raise LocalJumpError, "No block given to yield to.", caller
+      else
+        block.yield(*args)
+      end
     end
 
     # Duplication of Contexts are dangerous because of all the deeply
