@@ -69,6 +69,13 @@ describe Reduxco::Context do
       context.call( Reduxco::CallableRef.new(:sum, 2) ).should == -101
     end
 
+    it 'should cache the results' do
+      context = Reduxco::Context.new(app: ->(c){ Object.new })
+
+      generated_object = context.call(:app)
+      context.call(:app).should == generated_object
+    end
+
     describe 'errors' do
 
       it 'should error if refname resolves to a non-callable' do
@@ -355,37 +362,18 @@ describe Reduxco::Context do
 
   end
 
-  describe 'run' do
+  describe 'reduce' do
 
-    it 'should run with a refname and return the result' do
+    it 'should reduce with a refname and return the result' do
       context = Reduxco::Context.new(app: ->(c){'app-result'})
 
-      context.run(:app, {}).should == 'app-result'
+      context.reduce(:app).should == 'app-result'
     end
 
-    it 'should run with :app by default' do
+    it 'should reduce with :app by default' do
       context = Reduxco::Context.new(app: ->(c){'app-result'})
 
-      context.run(:app, {}).should == 'app-result'
-    end
-
-    it 'should allow access to the locals object inside of callables' do
-      context = Reduxco::Context.new(app: ->(c){c.locals})
-
-      locals = Object.new
-      context.run(:app, locals).should == locals
-    end
-
-    it 'should reset the cache' do
-      counter = 0
-      context = Reduxco::Context.new(app: ->(c){counter+=1})
-
-      context.call(:app).should == 1
-      context.call(:app).should == 1
-
-      context.run(:app, {})
-
-      context.call(:app).should == 2
+      context.reduce(:app).should == 'app-result'
     end
 
   end

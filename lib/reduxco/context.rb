@@ -6,25 +6,22 @@ module Reduxco
   # Context is the client facing object for Reduxco.
   #
   # Typically, one instantiates a Context with one or more maps of callables
-  # by name, and then calls Contxt#run to calculate all dependent nodes and return
+  # by name, and then calls Contxt#reduce to calculate all dependent nodes and return
   # a result.
   #
   # Maps may be any object that, when iterated with each, gives name/callable
-  # pairs.
-  #
-  # Names may be any object that can serve as a hash key.
-  #
-  # Callables can be any object that responds to the call method.
+  # pairs. Names may be any object that can serve as a hash key. Callables can
+  # be any object that responds to the call method.
   #
   # == Overview
   #
   # Context orchestrates the reduction calculation.  It is primarily used
   # by callables invoked during computation to get access to their environment.
   #
-  # Instantiators of a Context typically only use the Context#run method.
+  # Instantiators of a Context typically only use the Context#reduce method.
   #
   # Users of Reduxco should use Reduxco::Reduxer rather than directly consume
-  # Context.
+  # Context directly.
   #
   # == Callable Helper Functions
   #
@@ -67,41 +64,19 @@ module Reduxco
       @calltable = CallableTable.new(@callable_maps)
 
       @callstack = Callstack.new
-      reset_cache()
-    end
-
-    # Accessor to the locals that are seeded on calls to run.
-    attr_reader :locals
-
-    # This is the primary method for interaction with a Context.
-    #
-    # Clears the completed statuses of callables and invokes the given refname
-    # for this context (or uses :app by default), returning the result.
-    #
-    # Must be provided a locals object, which can be any object but is usually
-    # a Hash of special values for leaf nodes in the calculation.
-    #
-    # It is good practice to treat locals as immutable, leveraging the Context
-    # calculation infrastructure to store intermediate values instead.
-    def run(refname=:app, locals)
-      reset_cache()
-      @locals = locals
-      self[refname]
+      @cache = {}
     end
 
     # Given a refname, call it for this context and return the result.
-    #
-    # This method is typically not directly called directly on a context,
-    # but instead is the primary method used within callables to refer to
-    # other callables.
     #
     # This can also take CallableRef instances directly, however if you find
     # yourself passing in static references, this is likely because of design
     # flaw in your callable map hierarchy.
     #
-    # Note that this does *not* clear the completed status of callables, so
-    # changes to the locals object (or calls outside of a run).
-    def call(refname)
+    # Call results are cached so that their values can be re-used.  If callables
+    # have side-effects their side-effects are only invoked the first time
+    # they are run.
+    def call(refname=:app)
       # First, we resolve the callref and invoke it.
       frame, callable = @calltable.resolve( CallableRef.new(refname) )
 
@@ -113,6 +88,7 @@ module Reduxco
       end
     end
     alias_method :[], :call
+    alias_method :reduce, :call
 
     # When invoked, finds the next callable in the CallableTable up the chain
     # from the current frame, calls it, and returns the result.
@@ -223,11 +199,6 @@ module Reduxco
         # No matter what crashes happened, we must ensure we pop the frame off the stack.
         popped = @callstack.pop
       end
-    end
-
-    def reset_cache
-      # We assign rather than destructively clear so that if we ever save/export caches from runs, they are not overwritten.
-      @cache = {}
     end
 
   end

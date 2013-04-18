@@ -1,9 +1,10 @@
-require 'reduxco/version.rb'
+require 'reduxco/version'
 
-require 'reduxco/callable_ref.rb'
-require 'reduxco/context.rb'
+require 'reduxco/callable_ref'
+require 'reduxco/context'
+require 'reduxco/reduxer'
 
-# See README.rdoc or Reduxco::Context
+# See README.rdoc or Reduxco::Reduxer
 module Reduxco
-  # Placeholder for RDoc documentation.
+  # Only declared here for RDoc documentation purposes of the module.
 end

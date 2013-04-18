@@ -7,11 +7,11 @@ describe 'RDoc Examples' do
     it 'should obey basic context use' do
       map = {
         sum: ->(c){ c[:x] + c[:y] },
-          x: ->(c){ c.locals[:x] },
-          y: ->(c){ c.locals[:y] }
+          x: ->(c){ 3 },
+          y: ->(c){ 5 }
       }
 
-      sum = Reduxco::Context.new(map).run(:sum, x:3, y:5)
+      sum = Reduxco::Reduxer.new(map).reduce(:sum)
       sum.should == 8
     end
 
@@ -24,7 +24,7 @@ describe 'RDoc Examples' do
         message: ->(c){ 'Hello From Map 2' }
       }
 
-      msg = Reduxco::Context.new(map1, map2).run(:message, {})
+      msg = Reduxco::Reduxer.new(map1, map2).reduce(:message)
       msg.should == 'Hello From Map 2'
     end
 
@@ -37,7 +37,7 @@ describe 'RDoc Examples' do
         message: ->(c){ c.super + ' and Hello From Map 2' }
       }
 
-      msg = Reduxco::Context.new(map1, map2).run(:message, {})
+      msg = Reduxco::Reduxer.new(map1, map2).reduce(:message)
       msg.should == 'Hello From Map 1 and Hello From Map 2'
     end
 
