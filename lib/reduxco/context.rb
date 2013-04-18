@@ -66,7 +66,7 @@ module Reduxco
       @callstack = Callstack.new
       @cache = {}
 
-      @insidestack = []
+      @block_association_cache = {}
     end
 
     # Given a refname, call it for this context and return the result.
@@ -90,7 +90,7 @@ module Reduxco
       if( frame.nil? )
         raise NameError, "No reference for name #{refname.inspect}", caller
       else
-        invoke(frame, callable)
+        invoke(frame, callable, &block)
       end
     end
     alias_method :reduce, :call
@@ -171,7 +171,8 @@ module Reduxco
 
     # Yields to the block given to a #Context.call
     def yield(*args)
-      @insidestack.last && @insidestack.last.call(*args)
+      block = @block_association_cache[current_frame]
+      block && block.yield(*args)
     end
 
     # Duplication of Contexts are dangerous because of all the deeply
@@ -195,7 +196,7 @@ module Reduxco
     #
     # It is up to the callers of this method to resolve the callable that must
     # be called, or give a Reduxco::Context::NameError if it cannot be found.
-    def invoke(frame, callable)
+    def invoke(frame, callable, &block)
       #Push the frame onto the callstack.
       @callstack.push(frame)
 
@@ -210,6 +211,7 @@ module Reduxco
 
         # Recall from cache, or build if necessary.
         unless( @cache.include?(frame) )
+          @block_association_cache[frame] = block
           @cache[frame] = callable.respond_to?(:call) ? callable.call(self) : raise(NotCallableError, "#{frame} does not resolve to a callable.", caller[1..-1])
         end
         @cache[frame]
