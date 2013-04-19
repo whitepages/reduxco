@@ -96,7 +96,7 @@ TBD
 
 = History
 
-[1.0.0 - 2013-Apr-??] Initial Release.
+[1.0.0 - 2013-Apr-18] Initial Release.
 
 = License
 
