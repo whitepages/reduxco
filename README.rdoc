@@ -1,24 +1,221 @@
+= Introduction to Reduxco
+
+== What is Reduxco?
+
+In a sentence,Reduxco is a general purpose graph reduction engine that is
+perfect for pipelines and calculation engines.
+
+At its core, Reduxco allows you to define interchangeable graph nodes and easily
+evalute them, producing one or more results. Key features include:
+* Interchangeable, modular nodes.
+* Self-organizing graph,
+* Lazy evaluation of nodes,
+* Node value caching,
+* Node Overriding and inheritance,
+* Helpers for nesting, and
+* Graph Reflection.
+
+== Why would I use Reduxco?
+
+The prototypical example of graph reduction is in the reduction of expression
+graphs, whereby each node represents one part of a larger calculation, and the
+final result is the final product of the calculation.
+
+But what Reduxco is best at are pipelines.
+
+Consider Rack Middleware: it is a list of interchangeable black-box like
+"nodes" that form a response generation pipeline.
+
+Now consider this: it often becomes necessary to communicate intermediate
+information between various components. This requires as sideband channel
+(e.g. rack env) to store this data. This has a couple of problems, including
+a lack of uniform access to data (i.e. did it come from the pipeline or the
+side-band data?), and even worse, a mixup in the order of middleware can cause
+errors due to missed dependencies.
+
+Reduxco solves these problems for you, by self organizing the dependency graph
+thanks to a lazy evaluation model.
+
+== Where is Reduxco Being Used?
+
+Reduxco is used to build the request/response pipelines for the Whitepages APIs;
+it handles everything from taking of the initial request parameters, all the
+way through generating and returning the final formatted output.
+
+It's modularity and customizability are used to great effect, allowing us to
+easily refactor or replace nodes to drastically change the result of a an API
+call, without having to worry about its effect on the rest of the work the
+request does.
+
+== How do I use Reduxco?
+
+At its core, Reduxco allows you to build a named set of "callables" (i.e. any
+object that responds to the <code>call</code> method, such as a Proc), and
+evaluate the values from one or more nodes.
+
+To give the rich set of features Reduxco offers, callables must take a single
+argument to their <code>call</code> method which contains a Reduxco::Context. The
+Context is essentially a little runtime, responsible for dynamically routing
+calls to dependencies, and caching the results.
+
+Lastly, Reduxco pipelines are created via the Reduxco::Reduxer class.
+
+Thus, as a contrived simpleexample, let's do a simple expression graph reduction on
+the equation <code>(x+y) * (x+y)</code>, with the values of x and y generated
+at random:
+
+  callables = {
+             x: ->(c){ rand(10) },
+             y: ->(c){ rand(10) },
+           sum: ->(c){ c[:x] + c[:y] },
+        result: ->(c){ c[:sum] * c[:sum] },
+           app: ->(c){ "For x=#{c[:x]} and y=#{c[:y]}, the result is #{c[:result]}." }
+  }
+
+  pipeline = Reduxco::Reduxer.new(callables)
+  output = pipeline.reduce
+  output.should == "For x=3 and y=6, the result is 81."
+
+This example starts by defining named callables as Ruby blocks, and then creating
+a Reduxco pipeline out of it. The call to <code>reduce</code> invokes calculation
+of the <code>:app</code> node, which cascades into evaluation of the required
+portions of the graph. Note that the result is the square of the sum,
+demonstrating that the <code>:x</code> and <code>:y</code> nodes are only
+evaluated once and cached.
+
+= Example
+
+This example demonstrates some more advanced features of Reduxco, such as
+instrospection, yielding values, flow helpers, and overriding.
+
+Consider the basic structure for an application with error
+handling, and that has the following requirements:
+* For the default gut implementation, we generate a random number.
+  * If that number is even, then we raise a RuntimeError.
+  * If that number is odd, we return the number.
+
+Furthermore, the consumer of the pipeline must define its own error handling
+strategy as so:
+* The error handling layer should catch the error and substitute the error
+  message string as the result.
+
+Lastly, to write tests against this, we nee to override the value to be an even
+for one test, and an odd for the next test.
+
+The finished code looks like this
+
+  # The base callables, probably served up from a factory.
+  base_callables = {
+    app: ->(c) do
+      c.inside(:error_handler) do
+        c[:value].even? ? raise(RuntimeError, "Even!") : c[:value]
+      end
+    end,
+
+    error_handler: ->(c) do
+      begin
+        c.yield
+      rescue => error
+        c.call(:onfailure){error} if c.include?(:onfailure)
+      end
+    end,
+
+    value: ->(c){ rand(100) },
+  }
+
+  # The contect specific eror handler implementation.
+  handler_callables = {
+    onfailure: ->(c){ c.yield.message }
+  }
+
+  # Test callables; overrieds the value to be an even value.
+  even_test_callables = {
+    value: ->(c){ 8 }
+  }
+
+  # Test callables: overrieds the value to be an odd value.
+  odd_test_callables = {
+    value: ->(c){ 13 }
+  }
+
+  # Test evens
+  pipeline = Reduxco::Reduxer.new(base_callables, handler_callables, even_test_callables)
+  pipeline.reduce.should == 'Even!'
+
+  # Test odds
+  pipeline = Reduxco::Reduxer.new(base_callables, handler_callables, odd_test_callables)
+  pipeline.reduce.should == 13
+
+  # Invoke with random result
+  pipeline = Reduxco::Reduxer.new(base_callables, handler_callables)
+  random_result = pipeline.reduce
+
+There are a few features to note about this code, with each explained in more
+detail below:
+* When multiple callable maps are given during pipeline instantiation, the
+  Reduxco::Context dispatches the the right-most map with the needed callable. Not shown
+  here is the ability to call <code>c.super</code> to get the value for a given
+  callable in the next highest map.
+* The error handler demonstrates the use of introspection via the Reduxco::Context#include?
+  method, which checks that a given name is available.
+  Not shown are several other inspection methods, including introspection
+  as to which nodes are evaluated.
+* The error handler utilizes the Reduxco::Context#yield method, which
+  yields the value of the block provided on the associated Reduxco::Context#call
+  method, in this case the error passed to the
+  <code>:onfailure</code> callable when invoked in the error handler.
+* The use of the convenience method Reduxco::Context#inside, which although is the
+  same as Reduxco::Context#call, expresses the meaning of the code better.
+
 = Overview
 
-Reduxco is a general purpose graph reduction calculation engine for those
-non-linear dependency flows that normal pipelines and Rack Middleware-like
-architectures can't do cleanly.
+Reduxco is a graph reduction engine on steroids. It allows the creation of
+maps of callables to create a self-organizing, lazy evaluated pipeline.
 
-Conceptually, it is similar to using Rack Middleware with named keys to store
-intermediate calculations that have to be reused later, but unlike Rack Middleware,
-Reduxco is self organizing based on the dependencies used by each piece.
+The main two classes are the Reduxco::Reduxer class, which is used to instantiate
+pipelines, and the Reduxco::Context class, which is coordinates communication
+between the nodes.
 
-It's primary public facing class is Reduxco::Context.
+== Callable
 
-= Examples
+They key building block of Reduxco pipelines are named "callables", which become
+the implementation logic for each node in the graph.
 
-== Basic Context Use
+There is no specific callable class. To be a callable, an object need comply
+with the following two rules:
+1. The object must respond to the <code>call</code> method.
+2. The <code>call</code> method must take a single argument, which is a
+   Reduxco::Context instance.
 
-In practice, one can build one ore more tables of callable objects (e.g. Procs or
-custom class instances), and register them with a Reduxco::Context.  Callables can then
-used their Reduco::Context handle to refer to the callables they can depend on.
+Most of the time, the standard Ruby Proc object is all that is necessary, but
+there are many clever reasons why one may substitute in a specialty object
+in its place.
 
-For example, the addition of two numbers could be done as follows:
+== Reduxco::Reduxer
+
+The Reduxco::Reduxer class is used to instantiate new pipelines, and to get
+values from the pipeline.
+
+=== Pipeline Creation
+
+Reduxco::Reduxer instances are created by passing one or more maps of callables
+during instantiation.
+
+Callable maps are usually Hash instance, whose keys are Symbol instances, and
+values meet the requirements of callables.
+
+If more than one map is provieded to the initializer, callables are resolved
+to the right-most argument that defines it. This provides a mechanism for
+overriding callables created by a factory to customize for your layer. See
+the section on overriding below.
+
+=== Pipeline Invocation
+
+The resulting Pipeline instance is considered an immutable object whose values
+are lazily evaluated as necessary and then cached. These values are extracted
+via the Reduxco::Reduxer#reduce method.
+
+For example, a simple pipeline can be instantiated with the following code:
 
   map = {
     sum: ->(c){ c[:x] + c[:y] },
@@ -26,24 +223,84 @@ For example, the addition of two numbers could be done as follows:
       y: ->(c){ 5 }
   }
 
-  sum = Reduxco::Reduxer.new(map).reduce(:sum)
+  pipeline = Reduxco::Reduxer.new(map)
+  sum = pipeline.reduce(:sum)
   sum.should == 8
 
-Note that the symbol <code>:app</code> is the default root node of Reduxco::Context#reduce,
-so if <code>:sum</code> were renamed to <code>:app</code> above, the last line could
-be slightly simplified as:
+Note that while Reduxco::Reduxer#reduce can take any named callable as an
+argument, it by default attempts to reduce the value of the <code>:app</code>
+callable when called with no argument.
 
-  sum = Reduxco::Context.new(map).reduce
+Thus, most practical pipelines define an <code>:app</code> callable and simply
+call Reduxco::Reduxer#reduce without an explicit argument:
 
-Of course, any object responding to <code>call</code> can be used as the values in
-the map, so one could just as easily define a class with an instance method of
-<code>call</code> on it instead of using Proc objects.
+  pipeline = Reduxco::Reduxer.new(app: ->(c){ "Hello World" })
+  result = pipeline.reduce
+  result.should == "Hello World"
+
+== Reduxco::Context
+
+The Reduxco::Context object is the workhorse of the pipeline. It is responsible
+for communication between the node including invoking the correct callables as
+necessary and caching their results.
+
+The Reduxco::Context instance is passed into each node's callable when it is
+invoked, allowing for a plethora of communication and helper methods to be
+used by the callables. An overview of this functionality is presented below.
+
+== Basic Calling
+
+The most common use of the Reduxco::Context object is to retrieve values of
+other callables. This is accomplished via one of two methods:
+* Reduxco::Context#[], which is the preferred way to call due to readability.
+* Reduxco::Context#call, which behaves exactly the same, but has the option of
+  taking a block that can be evaluated by the called callable (explained below)
+
+Don't forget that callables are only evaluated once and then cached, so multiple
+retrievals of complex computations are as efficient as possible.
+
+== Yielding Values
+
+Sometimes one needs to push values into a callable when it is called. A good
+example of this are error handling hooks, which are invoked when an error is
+caught, and must be passed the error for processing.
+
+Reduxco::Context#yield provides functionality to do this, but allowing the
+callable to execute the block passed into the associated Reduxco::Context#call
+method, and retrieve its value.
+
+For example, consider the following pipeline:
+
+  callables = {
+    app: ->(c){ c.call(:foo) {3+20} },
+    foo: ->(c){ c.yield + 100 }
+  }
+
+  pipeline = Reduxco::Reduxer.new(callables)
+  pipeline.reduce.should == 123
+
 
 == Overriding and Super
 
-If multiple maps of callables are given, and the keys (referred to as names from
-here on) are duplicated in the maps, the last map given wins, shadowing the previous map.
-For example:
+=== Dynamic Dispatch
+
+Resolution of callables for a node is done via a dynamic dispatch methodology
+that is not all that different than dynamic method dispatch in object oriented
+dynamic languages like Ruby.
+
+The Reduxco::Context looks at its stack of callable maps, and tests each map
+until if finds a matching callable. It then selects that callable, and
+retrieves the associated value from the cache, evaluating the callable itself
+if necessary.
+
+=== Override
+
+This dynamic dispatching can be used to override the callable for a node with
+a new one at instantiation (thus shadowing the previous definition). This is
+especially useful when the primary callables may be generated by a factory, but
+some pipeline customization is needed at the client layer.
+
+The following code shows a concise example of overriding:
 
   map1 = {
     message: ->(c){ 'Hello From Map 1' }
@@ -56,8 +313,16 @@ For example:
   msg = Reduxco::Reduxer.new(map1, map2).reduce(:message)
   msg.should == 'Hello From Map 2'
 
-If one wishes to refer to previous (shadowed) callables, one can do that using
-Context#super.  For example:
+=== Super
+
+As mentioned earlier, the dynamic dispatch model used by Reduxco acts a bit like
+a dynamic object oriented language. The logical extension of this is to allow
+for a shadowing callable to execute the callable it shadows. This is easily
+done via the Reduxco::Context#super method, which tells the dynamic dispatcher
+to call the callable for the same node name, starting with the map "above" you
+in the stack.
+
+The following example shows a call to super in the override:
 
   map1 = {
     message: ->(c){ 'Hello From Map 1' }
@@ -67,17 +332,19 @@ Context#super.  For example:
     message: ->(c){ c.super + ' and Hello From Map 2' }
   }
 
-  msg = Reduxco::Context.new(map1, map2).reduce(:message)
+  msg = Reduxco::Reduxer.new(map1, map2).reduce(:message)
   msg.should == 'Hello From Map 1 and Hello From Map 2'
 
-== Introspection
+== Instrospection
 
 There are several introspection methods for making assertions about the
-Reduxco::Context.  These are usually used by callables to inspect their
-environment before proceeding.
+Reduxco::Context. These are usually used by callables to inspect their
+environment before proceeding down an execution path.
 
+
+The primary introspection methods are as follows:
 [Reduxco::Context#include?] Allows you to inspect if the Reduxco::Context
-                            can resolve a given refname if called.
+                            can resolve a given node name if called.
 [Reduxco::Context#completed?] Allows you to inspect if the callable associated
                               with a given block name has already been called;
                               useful for assertions about weak dependencies.
@@ -86,13 +353,45 @@ environment before proceeding.
 
 == Before, After, and Inside
 
+While not strictly necessary, it is often useful to control call flow with
+a method call that is more expressive than <code>call</code>. In other words,
+while these methods are trivially implementable with just <code>call</code>,
+it is often more desireable for your code to more directly express your intent
+as an author to help with readability and maintainability of your code.
+
+Academically, the key characteristic in common to Reduxco::Context#before,
+Reduxco::Context#after and Reduxco::Context#insid, is that they each allow for
+easy expression of ordered flow control, but with the return value being that
+of the callable initially called.
+
+As a practical example, Reduxco::Context#inside is often used to insert a
+genericized error handling node into the app node, as in the following code
+listing:
+
+  callables = {
+    app: ->(c) do
+      c.inside(:error_handler) do
+        c[:result]
+      end
+    end,
+
+    error_handler: ->(c) do
+      begin
+        c.yield
+      rescue => error
+        c.call(:onfailure){error} if c.include?(:onfailure)
+        raise error
+      end
+    end
+
+    result: ->(c) do
+        # do something
+    end
+  }
+
 = Contact
 
 Jeff Reinecke <jreinecke@whitepages.com>
-
-= Roadmap
-
-TBD
 
 = History
 
