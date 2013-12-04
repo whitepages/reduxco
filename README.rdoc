@@ -2,18 +2,18 @@
 
 == What is Reduxco?
 
-In a sentence,Reduxco is a general purpose graph reduction engine that is
+In a sentence, Reduxco is a general purpose graph reduction engine that is
 perfect for pipelines and calculation engines.
 
 At its core, Reduxco allows you to define interchangeable graph nodes and easily
 evalute them, producing one or more results. Key features include:
-* Interchangeable, modular nodes.
+* Interchangeable, modular nodes,
 * Self-organizing graph,
 * Lazy evaluation of nodes,
 * Node value caching,
 * Node Overriding and inheritance,
 * Helpers for nesting, and
-* Graph Reflection.
+* Graph Introspection and Reflection.
 
 == Why would I use Reduxco?
 
@@ -25,16 +25,16 @@ But what Reduxco is best at are pipelines.
 
 Consider Rack Middleware: it is a list of interchangeable black-box like
 "nodes" that form a response generation pipeline.
-
 Now consider this: it often becomes necessary to communicate intermediate
-information between various components. This requires as sideband channel
-(e.g. rack env) to store this data. This has a couple of problems, including
+information between various components. This requires a sideband channel
+(e.g. the rack env) to store this data. This has a couple of problems, including
 a lack of uniform access to data (i.e. did it come from the pipeline or the
-side-band data?), and even worse, a mixup in the order of middleware can cause
-errors due to missed dependencies.
+side-band data?). Even worse, a mixup in the order of middleware can cause
+errors due to missing dependencies in the sideband channel.
 
 Reduxco solves these problems for you, by self organizing the dependency graph
-thanks to a lazy evaluation model.
+thanks to a lazy evaluation model that gets the value of each node as it is
+needed.
 
 == Where is Reduxco Being Used?
 
