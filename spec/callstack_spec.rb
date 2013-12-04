@@ -24,6 +24,13 @@ describe Reduxco::Context::Callstack do
     @stack.top.should == :top
   end
 
+  it 'should allow peeking into the stack' do
+    @stack.peek(0).should == @stack.top
+    @stack.peek(@stack.depth).should be_nil
+    @stack.peek(1).should == :middle
+    @stack.peek(2).should == :bottom
+  end
+
   it 'should pop' do
     frame = @stack.pop
 

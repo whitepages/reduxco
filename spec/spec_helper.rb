@@ -7,7 +7,11 @@ require 'reduxco'
 
 # Require the debugger, if present.
 begin
-  require 'debugger'
+  if( RUBY_VERSION < '2.0.0' )
+    require 'debugger'
+  else
+    require 'byebug'
+  end
 rescue LoadError
   module Kernel
     def debugger(*args, &block)
@@ -15,3 +19,4 @@ rescue LoadError
     end
   end
 end
+

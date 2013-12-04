@@ -610,6 +610,20 @@ describe Reduxco::Context do
           context.call(:app).should == 25
         end
 
+        it 'should allow forwarded yielded values to be handed down' do
+          $debug = true
+          value = []
+
+          context = Reduxco::Context.new(
+            app: ->(c){ c.call(:outter){ value } },
+            outter: ->(c){ c.call(:middle){ c.yield } },
+            middle: ->(c){ c.call(:inner){ c.yield } },
+            inner: ->(c){ c.yield + [:inner] }
+          )
+
+          context.call(:app).should == [:inner]
+        end
+
       end
 
     end

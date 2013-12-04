@@ -28,6 +28,13 @@ module Reduxco
         @stack.last
       end
 
+      # Returns the element at a given depth from the top of the stack.
+      #
+      # A depth of zero corresponds to the top of the stack.
+      def peek(depth)
+        @stack[-depth - 1]
+      end
+
       # Returns true if the callstack contains the given frame
       def include?(frame)
         @stack.include?(frame)

@@ -70,6 +70,7 @@ module Reduxco
       @cache = {}
 
       @block_association_cache = {}
+      @yield_frame_depth = 0
     end
 
     # Given a refname, call it for this context and return the result.
@@ -129,11 +130,19 @@ module Reduxco
 
     # Yields to the block given to a #Context.call
     def yield(*args)
-      block = block_for_frame(current_frame)
+      block = block_for_frame(yield_frame)
       if( block.nil? )
         raise LocalJumpError, "No block given to yield to.", caller
       else
-        block.yield(*args)
+        begin
+          # If the block call has a context yield inside, resolve that one frame up.
+          # This turns out to be what we usually want as we are forwarding a
+          # yielded value in the call.
+          @yield_frame_depth += 1
+          block.call(*args)
+        ensure
+          @yield_frame_depth -= 1
+        end
       end
     end
 
@@ -145,6 +154,10 @@ module Reduxco
     # Returns the top frame of the callstack.
     def current_frame
       @callstack.top
+    end
+
+    def yield_frame
+      @callstack.peek(@yield_frame_depth)
     end
 
     # Returns a true value if the given refname is defined in this context.
@@ -220,6 +233,9 @@ module Reduxco
         if( @callstack.rest.include?(frame) )
           raise CyclicalError, "Cyclical dependency on #{frame.inspect} in #{@callstack.rest.top.inspect}", callstack.to_caller(caller[1])
         end
+
+        # On a new call we start resolving yield blocks at the current frame, so reset to zero.
+        @yield_frame_depth = 0
 
         # Recall from cache, or build if necessary.
         unless( @cache.include?(frame) )
