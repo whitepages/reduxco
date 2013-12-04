@@ -396,7 +396,7 @@ Jeff Reinecke <jreinecke@whitepages.com>
 = History
 
 [1.0.0 - 2013-Apr-18] Initial Release.
-[1.0.1 - 2013-Apr-18] Fixed a bug where calling c.yield in a block given to a
+[1.0.1 - 2013-Dec-03] Fixed a bug where calling c.yield in a block given to a
                       call would give a stack overflow.
 
 = License
