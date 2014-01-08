@@ -25,8 +25,8 @@ module Reduxco
 
     # Retrieves the value of the given refname.  Both final and intermediate
     # values are cached, so multiple calls have low overhead.
-    def call(refname=:app)
-      @context.call(refname)
+    def call(refname=:app, &block)
+      @context.call(refname, &block)
     end
     alias_method :[], :call
     alias_method :reduce, :call

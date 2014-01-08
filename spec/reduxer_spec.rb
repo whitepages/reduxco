@@ -18,9 +18,24 @@ describe Reduxco::Reduxer do
       reduxer = Reduxco::Reduxer.new
 
       refname = double('refname')
-      reduxer.context.should_receive(:call).with(refname)
+      return_value = double('return_value')
+      reduxer.context.should_receive(:call).with(refname) { return_value }
 
-      reduxer.reduce(refname)
+      expect( reduxer.reduce(refname) ).to eq(return_value)
+    end
+
+    it 'should pass through the block to the context call method' do
+      reduxer = Reduxco::Reduxer.new
+
+      refname = double('refname')
+      block_value = double('block_value')
+
+      reduxer.context.should_receive(:call) do |*args, &block|
+        expect(args).to eq [refname]
+        expect(block.call).to eq(block_value)
+      end
+
+      reduxer.reduce(refname){block_value}
     end
 
   end
